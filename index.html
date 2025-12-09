@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizador de Horarios - ISI UTN FRC</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Organizador de Horarios</h1>
+            <p>Ingeniería en Sistemas de Información - UTN FRRO</p>
+        </header>
+
+        <!-- Modal de selección de cuatrimestre -->
+        <div id="cuatrimestreModal" class="modal">
+            <div class="modal-content">
+                <h2>Selecciona el cuatrimestre</h2>
+                <div class="modal-buttons">
+                    <button onclick="seleccionarCuatrimestre(1)" class="btn-cuatrimestre">Primer Cuatrimestre</button>
+                    <button onclick="seleccionarCuatrimestre(2)" class="btn-cuatrimestre">Segundo Cuatrimestre</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Panel lateral de materias -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>Materias Disponibles</h2>
+                    <div class="filters">
+                        <select id="filtroAnio" onchange="filtrarMaterias()">
+                            <option value="">Todos los años</option>
+                            <option value="4">4to Año</option>
+                            <option value="5">5to Año</option>
+                        </select>
+                        <select id="filtroComision" onchange="filtrarMaterias()">
+                            <option value="">Todas las comisiones</option>
+                            <option value="4K1">4K1</option>
+                            <option value="4K2">4K2</option>
+                            <option value="4K3">4K3</option>
+                            <option value="4K4">4K4</option>
+                            <option value="5K1">5K1</option>
+                            <option value="5K2">5K2</option>
+                            <option value="5K3">5K3</option>
+                            <option value="5K4">5K4</option>
+                        </select>
+                        <button onclick="cambiarCuatrimestre()" class="btn-cambiar">Cambiar Cuatrimestre</button>
+                    </div>
+                </div>
+                <div id="listaMaterias" class="materias-list"></div>
+            </aside>
+
+            <!-- Calendario principal -->
+            <main class="calendar-container">
+                <div class="calendar-header">
+                    <h2>Mi Horario - <span id="cuatrimestreActual"></span></h2>
+                    <div class="calendar-actions">
+                        <button onclick="limpiarHorario()" class="btn-limpiar">Limpiar Horario</button>
+                        <button onclick="exportarHorario()" class="btn-exportar">Exportar</button>
+                    </div>
+                </div>
+                <div id="calendario" class="calendar"></div>
+                
+                <!-- Panel de horarios disponibles -->
+                <div id="panelHorarios" class="horarios-panel" style="display: none;">
+                    <div class="horarios-header">
+                        <h3 id="nombreMateriaSeleccionada"></h3>
+                        <button onclick="cerrarPanelHorarios()" class="btn-cerrar">×</button>
+                    </div>
+                    <div id="horariosDisponibles" class="horarios-disponibles"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
