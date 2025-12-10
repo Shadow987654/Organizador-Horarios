@@ -116,6 +116,14 @@ function cargarMaterias() {
         materiasUnicas[key].comisiones.push(materia.comision);
     });
     
+    // Filtrar materias que ya están en el horario
+    const materiasEnHorario = horarioActual.map(item => item.nombre);
+    Object.keys(materiasUnicas).forEach(key => {
+        if (materiasEnHorario.includes(key)) {
+            delete materiasUnicas[key];
+        }
+    });
+    
     // Ordenar y mostrar
     Object.values(materiasUnicas)
         .sort((a, b) => a.nombre.localeCompare(b.nombre))
@@ -281,6 +289,7 @@ function agregarAlHorarioDesdePreview(materia, comision) {
     
     horarioActual.push(item);
     renderizarHorario();
+    cargarMaterias(); // Actualizar lista de materias para ocultar la agregada
     
     mostrarNotificacion(`✓ ${materia.nombre} (${comision}) agregada al horario`, 'success');
 }
@@ -390,6 +399,7 @@ function eliminarDelHorario(id) {
         const materia = horarioActual[index];
         horarioActual.splice(index, 1);
         renderizarHorario();
+        cargarMaterias(); // Actualizar lista de materias para volver a mostrar la eliminada
         mostrarNotificacion(`✗ ${materia.nombre} (${materia.comision}) eliminada del horario`, 'danger');
     }
 }
@@ -406,6 +416,7 @@ function limpiarHorario() {
         colorIndex = 0;
         limpiarPreview();
         renderizarHorario();
+        cargarMaterias(); // Actualizar lista de materias para volver a mostrarlas todas
         mostrarNotificacion('Horario limpiado correctamente', 'success');
     }
 }

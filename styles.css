@@ -1,25 +1,41 @@
-* {
+    * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
 :root {
-    --primary-color: #2c3e50;
-    --secondary-color: #3498db;
-    --success-color: #27ae60;
+    /* Paleta de colores principal - Verde a Azul */
+    --primary-color: #184e77;
+    --primary-light: #1e6091;
+    --secondary-color: #1a759f;
+    --secondary-light: #168aad;
+    --accent-color: #34a0a4;
+    --accent-light: #52b69a;
+    --green-light: #76c893;
+    --lighter-green: #99d98c;
+    --light-green: #b5e48c;
+    --lightest-green: #d9ed92;
+    
+    /* Colores de estado */
+    --success-color: #52b69a;
     --danger-color: #e74c3c;
     --warning-color: #f39c12;
-    --light-gray: #ecf0f1;
-    --dark-gray: #95a5a6;
+    
+    /* Neutros */
     --white: #ffffff;
-    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #6c757d;
+    
+    /* Sombras */
+    --shadow: 0 2px 8px rgba(24, 78, 119, 0.1);
+    --shadow-lg: 0 4px 16px rgba(24, 78, 119, 0.15);
 }
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #d9ed92 0%, #76c893 25%, #34a0a4 50%, #1a759f 75%, #184e77 100%);
     min-height: 100vh;
     padding: 20px;
 }
@@ -97,7 +113,7 @@ header p {
 }
 
 .btn-cuatrimestre:hover {
-    background: #2980b9;
+    background: var(--secondary-light);
     transform: translateY(-2px);
     box-shadow: var(--shadow);
 }
@@ -178,14 +194,14 @@ header p {
     padding: 15px;
     margin-bottom: 10px;
     border-radius: 8px;
-    background: var(--light-gray);
+    background: var(--lightest-green);
     cursor: pointer;
     transition: all 0.3s ease;
-    border-left: 4px solid var(--secondary-color);
+    border-left: 4px solid var(--accent-color);
 }
 
 .materia-item:hover {
-    background: #d5dbdb;
+    background: var(--light-green);
     transform: translateX(5px);
 }
 
@@ -211,7 +227,7 @@ header p {
     font-size: 0.75rem;
     font-weight: 600;
     margin-top: 5px;
-    background: var(--secondary-color);
+    background: var(--accent-color);
     color: var(--white);
 }
 
@@ -235,7 +251,7 @@ header p {
     align-items: center;
     margin-bottom: 20px;
     padding-bottom: 15px;
-    border-bottom: 2px solid var(--light-gray);
+    border-bottom: 2px solid var(--light-green);
 }
 
 .calendar-header h2 {
@@ -280,7 +296,7 @@ header p {
     display: grid;
     grid-template-columns: 80px repeat(6, 1fr);
     gap: 2px;
-    background: var(--dark-gray);
+    background: var(--secondary-light);
     border-radius: 8px;
     overflow: hidden;
     flex: 1;
@@ -296,7 +312,7 @@ header p {
 }
 
 .time-label {
-    background: var(--light-gray);
+    background: var(--lightest-green);
     padding: 10px 5px;
     text-align: center;
     font-size: 0.75rem;
@@ -406,7 +422,7 @@ header p {
 .horarios-panel {
     margin-top: 20px;
     padding: 20px;
-    background: var(--light-gray);
+    background: var(--lightest-green);
     border-radius: 8px;
 }
 
@@ -474,7 +490,7 @@ header p {
 }
 
 .horario-option.disponible:hover {
-    background: #e8f8f5;
+    background: var(--lightest-green);
 }
 
 .horario-option.conflicto {
@@ -642,14 +658,14 @@ header p {
 }
 
 .materias-list::-webkit-scrollbar-track {
-    background: var(--light-gray);
+    background: var(--lightest-green);
 }
 
 .materias-list::-webkit-scrollbar-thumb {
-    background: var(--dark-gray);
+    background: var(--accent-color);
     border-radius: 4px;
 }
 
 .materias-list::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-color);
+    background: var(--secondary-color);
 }
