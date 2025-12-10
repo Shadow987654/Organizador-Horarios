@@ -1,4 +1,4 @@
-# Organizador de Horarios - ISI UTN FRRO
+# Organizador de Horarios - ISI UTN FRC
 
 Sistema completo para organizar horarios universitarios con base de datos SQLite y API REST.
 

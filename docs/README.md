@@ -1,4 +1,4 @@
-# Organizador de Horarios - ISI UTN FRRO
+# Organizador de Horarios - ISI UTN FRC
 
 Aplicación web responsive para organizar horarios de las materias de 4to y 5to año de Ingeniería en Sistemas de Información.
 

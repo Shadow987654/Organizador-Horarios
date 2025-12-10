@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
+const fs = require('fs');
 const path = require('path');
 
 const app = express();
@@ -10,11 +11,44 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Inicializar base de datos
-const db = new Database(path.join(__dirname, '..', 'database', 'organizador_horarios.db'));
+// Variables globales para la base de datos
+let db = null;
+let SQL = null;
 
-// Habilitar foreign keys
-db.pragma('foreign_keys = ON');
+// Inicializar sql.js y cargar/crear base de datos
+async function initDatabase() {
+    SQL = await initSqlJs();
+    
+    const dbPath = path.join(__dirname, '..', 'database', 'organizador_horarios.db');
+    
+    try {
+        // Intentar cargar base de datos existente
+        const buffer = fs.readFileSync(dbPath);
+        db = new SQL.Database(buffer);
+        console.log('✅ Base de datos cargada desde:', dbPath);
+    } catch (error) {
+        // Si no existe, crear nueva
+        db = new SQL.Database();
+        console.log('✅ Nueva base de datos creada en memoria');
+    }
+}
+
+// Función para guardar la base de datos
+function saveDatabase() {
+    if (!db) return;
+    
+    const dbPath = path.join(__dirname, '..', 'database', 'organizador_horarios.db');
+    const data = db.export();
+    const buffer = Buffer.from(data);
+    
+    // Crear directorio si no existe
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(dbPath, buffer);
+}
 
 // =========================
 // RUTAS DE LA API
@@ -23,7 +57,14 @@ db.pragma('foreign_keys = ON');
 // GET: Obtener todas las carreras
 app.get('/api/carreras', (req, res) => {
     try {
-        const carreras = db.prepare('SELECT * FROM carreras').all();
+        const result = db.exec('SELECT * FROM carreras');
+        const carreras = result.length > 0 ? result[0].values.map(row => ({
+            id: row[0],
+            nombre: row[1],
+            codigo: row[2],
+            facultad: row[3],
+            created_at: row[4]
+        })) : [];
         res.json(carreras);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -34,11 +75,17 @@ app.get('/api/carreras', (req, res) => {
 app.get('/api/carreras/:carreraId/anios', (req, res) => {
     try {
         const { carreraId } = req.params;
-        const anios = db.prepare(`
+        const result = db.exec(`
             SELECT * FROM anios_academicos 
-            WHERE carrera_id = ? 
+            WHERE carrera_id = ${carreraId}
             ORDER BY numero_anio
-        `).all(carreraId);
+        `);
+        const anios = result.length > 0 ? result[0].values.map(row => ({
+            id: row[0],
+            carrera_id: row[1],
+            numero_anio: row[2],
+            descripcion: row[3]
+        })) : [];
         res.json(anios);
     } catch (error) {
         res.status(500).json({ error: error.message });
