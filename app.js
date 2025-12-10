@@ -418,63 +418,97 @@ function cerrarPanelHorarios() {
 }
 
 // Exportar horario
-function exportarHorario() {
+async function exportarHorario() {
     if (horarioActual.length === 0) {
         mostrarNotificacion('No hay materias en el horario para exportar', 'warning');
         return;
     }
     
-    let texto = `HORARIO - ${cuatrimestreSeleccionado === 1 ? 'PRIMER' : 'SEGUNDO'} CUATRIMESTRE\n`;
-    texto += `Ingeniería en Sistemas de Información - UTN FRRO\n`;
-    texto += `Generado el: ${new Date().toLocaleDateString()}\n\n`;
-    texto += '='.repeat(60) + '\n\n';
-    
-    // Agrupar por día
-    const porDia = {};
-    diasSemana.forEach(dia => porDia[dia] = []);
-    
-    horarioActual.forEach(item => {
-        item.horarios.forEach(horario => {
-            porDia[horario.dia].push({
-                nombre: item.nombre,
-                comision: item.comision,
-                inicio: horario.inicio,
-                fin: horario.fin
-            });
+    try {
+        // Limpiar cualquier preview antes de capturar
+        limpiarPreview();
+        
+        // Crear un contenedor temporal para la captura
+        const captureContainer = document.createElement('div');
+        captureContainer.style.cssText = `
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+        `;
+        
+        // Clonar el calendario y el header
+        const calendarHeader = document.querySelector('.calendar-header').cloneNode(true);
+        const calendario = document.getElementById('calendario').cloneNode(true);
+        
+        // Eliminar botones del header clonado
+        const actions = calendarHeader.querySelector('.calendar-actions');
+        if (actions) actions.remove();
+        
+        // Crear estructura de captura
+        const captureContent = document.createElement('div');
+        captureContent.style.cssText = `
+            background: white;
+            padding: 20px;
+            min-width: 1200px;
+        `;
+        
+        // Agregar título mejorado
+        const titulo = document.createElement('div');
+        titulo.style.cssText = `
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            border-radius: 8px;
+        `;
+        titulo.innerHTML = `
+            <h1 style="margin: 0 0 10px 0; font-size: 2rem;">Mi Horario</h1>
+            <p style="margin: 0; font-size: 1.2rem;">${cuatrimestreSeleccionado === 1 ? 'Primer Cuatrimestre' : 'Segundo Cuatrimestre'}</p>
+            <p style="margin: 5px 0 0 0; font-size: 0.9rem; opacity: 0.9;">Ingeniería en Sistemas de Información - UTN FRC</p>
+            <p style="margin: 5px 0 0 0; font-size: 0.85rem; opacity: 0.8;">Generado el: ${new Date().toLocaleDateString('es-AR')}</p>
+        `;
+        
+        captureContent.appendChild(titulo);
+        captureContent.appendChild(calendario);
+        captureContainer.appendChild(captureContent);
+        document.body.appendChild(captureContainer);
+        
+        // Usar html2canvas para capturar
+        mostrarNotificacion('Generando imagen...', 'info');
+        
+        const canvas = await html2canvas(captureContent, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            logging: false,
+            width: captureContent.scrollWidth,
+            height: captureContent.scrollHeight
         });
-    });
-    
-    // Generar texto por día
-    diasSemana.forEach(dia => {
-        if (porDia[dia].length > 0) {
-            texto += `${dia.toUpperCase()}\n`;
-            texto += '-'.repeat(60) + '\n';
+        
+        // Eliminar contenedor temporal
+        document.body.removeChild(captureContainer);
+        
+        // Convertir canvas a blob y descargar
+        canvas.toBlob((blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `horario_${cuatrimestreSeleccionado}C_${new Date().toLocaleDateString('es-AR').replace(/\//g, '-')}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
             
-            porDia[dia]
-                .sort((a, b) => convertirHoraAMinutos(a.inicio) - convertirHoraAMinutos(b.inicio))
-                .forEach(clase => {
-                    texto += `  ${clase.inicio} - ${clase.fin}: ${clase.nombre} (${clase.comision})\n`;
-                });
-            
-            texto += '\n';
-        }
-    });
-    
-    texto += '='.repeat(60) + '\n';
-    texto += `\nTotal de materias: ${horarioActual.length}\n`;
-    
-    // Descargar archivo
-    const blob = new Blob([texto], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `horario_${cuatrimestreSeleccionado}C_${Date.now()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    mostrarNotificacion('✓ Horario exportado correctamente', 'success');
+            mostrarNotificacion('✓ Horario exportado como imagen', 'success');
+        });
+        
+    } catch (error) {
+        console.error('Error al exportar:', error);
+        mostrarNotificacion('Error al exportar el horario', 'danger');
+    }
 }
 
 // Sistema de notificaciones
