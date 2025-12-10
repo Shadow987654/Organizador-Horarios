@@ -94,10 +94,45 @@ header p {
     font-size: 1.8rem;
 }
 
+.modal-section {
+    margin-bottom: 25px;
+}
+
+.modal-section h3 {
+    color: var(--primary-light);
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
 .modal-buttons {
     display: flex;
     gap: 20px;
     justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-anio {
+    padding: 12px 24px;
+    font-size: 1rem;
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--primary-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.btn-anio:hover {
+    background: var(--primary-color);
+    color: var(--white);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.btn-anio.selected {
+    background: var(--primary-color);
+    color: var(--white);
 }
 
 .btn-cuatrimestre {

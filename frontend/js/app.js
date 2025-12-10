@@ -4,6 +4,7 @@ let horarioActual = [];
 let materiaSeleccionada = null;
 let previewActual = null;
 let colorIndex = 0;
+let todasLasMaterias = {};
 
 // Horarios del día (de 8:00 a 23:00)
 const horariosDelDia = [
@@ -16,8 +17,30 @@ const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sába
 
 // Inicialización
 window.addEventListener('DOMContentLoaded', () => {
+    cargarDatosIniciales();
     mostrarModalCuatrimestre();
 });
+
+// Cargar datos desde la API o desde data.js local
+async function cargarDatosIniciales() {
+    try {
+        // Intentar cargar desde la API
+        const response = await fetch('http://localhost:3000/api/materias');
+        if (response.ok) {
+            todasLasMaterias = await response.json();
+            console.log('✅ Datos cargados desde la API');
+        } else {
+            throw new Error('API no disponible');
+        }
+    } catch (error) {
+        console.log('⚠️ API no disponible, usando datos locales');
+        // Combinar data.js y data-1a3.js si están disponibles
+        todasLasMaterias = typeof materiasData !== 'undefined' ? materiasData : {};
+        if (typeof materiasData1a3 !== 'undefined') {
+            todasLasMaterias = { ...materiasData1a3, ...todasLasMaterias };
+        }
+    }
+}
 
 // Selección de cuatrimestre
 function seleccionarCuatrimestre(cuatrimestre) {
@@ -25,8 +48,26 @@ function seleccionarCuatrimestre(cuatrimestre) {
     document.getElementById('cuatrimestreModal').style.display = 'none';
     document.getElementById('cuatrimestreActual').textContent = 
         cuatrimestre === 1 ? 'Primer Cuatrimestre' : 'Segundo Cuatrimestre';
+    
     inicializarCalendario();
+    cargarSelectComisiones();
     cargarMaterias();
+}
+
+// Cargar select de comisiones dinámicamente con todas las comisiones disponibles
+function cargarSelectComisiones() {
+    const select = document.getElementById('filtroComision');
+    select.innerHTML = '<option value="">Todas las comisiones</option>';
+    
+    // Obtener todas las comisiones disponibles en los datos
+    const comisiones = Object.keys(todasLasMaterias).sort();
+    
+    comisiones.forEach(codigo => {
+        const option = document.createElement('option');
+        option.value = codigo;
+        option.textContent = codigo;
+        select.appendChild(option);
+    });
 }
 
 function cambiarCuatrimestre() {
@@ -86,34 +127,43 @@ function cargarMaterias() {
     const listaMaterias = document.getElementById('listaMaterias');
     listaMaterias.innerHTML = '';
     
-    const todasLasMaterias = [];
+    const materiasDelAnio = [];
     
-    // Recopilar todas las materias disponibles para el cuatrimestre seleccionado
-    Object.keys(materiasData).forEach(comision => {
-        materiasData[comision].forEach(materia => {
-            if (materia.cuatrimestre.includes(cuatrimestreSeleccionado)) {
-                todasLasMaterias.push({
-                    ...materia,
-                    comision: comision,
-                    anio: comision.charAt(0)
-                });
-            }
-        });
+    // Recopilar todas las materias de todos los años para el cuatrimestre seleccionado
+    Object.keys(todasLasMaterias).forEach(comision => {
+        if (todasLasMaterias[comision]) {
+            const anio = parseInt(comision.charAt(0)); // Extraer año de la comisión
+            todasLasMaterias[comision].forEach(materia => {
+                // Solo incluir materias del cuatrimestre seleccionado
+                const perteneceAlCuatrimestre = materia.horarios.some(h => 
+                    h.cuatrimestre === cuatrimestreSeleccionado
+                );
+                
+                if (perteneceAlCuatrimestre) {
+                    materiasDelAnio.push({
+                        ...materia,
+                        comision: comision,
+                        anio: anio
+                    });
+                }
+            });
+        }
     });
     
     // Agrupar por nombre de materia (eliminar duplicados)
     const materiasUnicas = {};
-    todasLasMaterias.forEach(materia => {
+    materiasDelAnio.forEach(materia => {
         const key = materia.nombre;
         if (!materiasUnicas[key]) {
             materiasUnicas[key] = {
                 nombre: materia.nombre,
-                electiva: materia.electiva,
-                tipo: materia.tipo,
-                comisiones: []
+                comisiones: [],
+                horariosPorComision: {},
+                anio: materia.anio // Guardar el año para ordenar
             };
         }
         materiasUnicas[key].comisiones.push(materia.comision);
+        materiasUnicas[key].horariosPorComision[materia.comision] = materia.horarios;
     });
     
     // Filtrar materias que ya están en el horario
@@ -124,9 +174,12 @@ function cargarMaterias() {
         }
     });
     
-    // Ordenar y mostrar
+    // Ordenar por año y luego por nombre
     Object.values(materiasUnicas)
-        .sort((a, b) => a.nombre.localeCompare(b.nombre))
+        .sort((a, b) => {
+            if (a.anio !== b.anio) return a.anio - b.anio;
+            return a.nombre.localeCompare(b.nombre);
+        })
         .forEach(materia => {
             const materiaElement = crearElementoMateria(materia);
             listaMaterias.appendChild(materiaElement);
@@ -141,7 +194,7 @@ function crearElementoMateria(materia) {
     
     div.innerHTML = `
         <h3>${materia.nombre}</h3>
-        <p>${materia.tipo} - ${comisionesText}</p>
+        <p>${materia.tipo || 'Materia'} - ${comisionesText}</p>
         <span class="materia-badge ${materia.electiva ? 'electiva' : ''}">
             ${materia.electiva ? 'Electiva' : 'Obligatoria'}
         </span>
@@ -160,14 +213,19 @@ function filtrarMaterias() {
     const items = document.querySelectorAll('.materia-item');
     
     items.forEach(item => {
-        const comisiones = item.querySelector('p').textContent;
+        const texto = item.textContent;
         let mostrar = true;
         
-        if (filtroAnio && !comisiones.includes(filtroAnio + 'K')) {
-            mostrar = false;
+        // Filtrar por año (buscar "Nº Año" en el texto)
+        if (filtroAnio) {
+            const anioPattern = new RegExp(`${filtroAnio}[°º]\\s*Año`, 'i');
+            if (!anioPattern.test(texto)) {
+                mostrar = false;
+            }
         }
         
-        if (filtroComision && !comisiones.includes(filtroComision)) {
+        // Filtrar por comisión
+        if (filtroComision && !texto.includes(filtroComision)) {
             mostrar = false;
         }
         
@@ -182,106 +240,99 @@ function mostrarHorariosDisponibles(nombreMateria) {
     // Limpiar preview anterior
     limpiarPreview();
     
-    // Mostrar preview en el calendario para todas las comisiones
-    const previews = [];
+    // Mostrar opciones disponibles en el panel lateral
+    const panelHorarios = document.getElementById('panelHorarios');
+    const nombreMateriaSeleccionada = document.getElementById('nombreMateriaSeleccionada');
+    const horariosDisponibles = document.getElementById('horariosDisponibles');
     
-    Object.keys(materiasData).forEach(comision => {
-        const materia = materiasData[comision].find(m => 
-            m.nombre === nombreMateria && 
-            m.cuatrimestre.includes(cuatrimestreSeleccionado)
-        );
-        
-        if (materia) {
-            const hayConflicto = verificarConflicto(materia.horarios);
-            previews.push({
-                materia: materia,
-                comision: comision,
-                conflicto: hayConflicto
-            });
+    nombreMateriaSeleccionada.textContent = nombreMateria;
+    horariosDisponibles.innerHTML = '';
+    
+    // Recopilar todas las comisiones que tienen esta materia
+    const comisionesConMateria = [];
+    
+    Object.keys(todasLasMaterias).forEach(comision => {
+        if (todasLasMaterias[comision]) {
+            const materia = todasLasMaterias[comision].find(m => m.nombre === nombreMateria);
+            
+            if (materia) {
+                // Filtrar horarios por cuatrimestre seleccionado
+                const horariosDelCuatrimestre = materia.horarios.filter(h => 
+                    h.cuatrimestre === cuatrimestreSeleccionado
+                );
+                
+                if (horariosDelCuatrimestre.length > 0) {
+                    comisionesConMateria.push({
+                        comision: comision,
+                        materia: materia,
+                        horarios: horariosDelCuatrimestre
+                    });
+                }
+            }
         }
     });
     
-    // Guardar previews actuales
-    previewActual = previews;
-    
-    // Renderizar previews en el calendario
-    previews.forEach(preview => {
-        renderizarPreview(preview.materia, preview.comision, preview.conflicto);
-    });
-    
-    // Mostrar mensaje informativo
-    mostrarNotificacion(
-        `Selecciona una comisión en el calendario. Verde = disponible, Rojo = conflicto`,
-        'info'
-    );
-}
-
-function renderizarPreview(materia, comision, hayConflicto) {
-    materia.horarios.forEach(horario => {
-        const evento = crearEventoPreview(materia, comision, horario, hayConflicto);
-        const cell = encontrarCelda(horario.dia, horario.inicio);
+    // Crear botones para cada comisión
+    comisionesConMateria.forEach(({ comision, materia, horarios }) => {
+        const hayConflicto = verificarConflicto(horarios);
         
-        if (cell) {
-            cell.appendChild(evento);
+        const div = document.createElement('div');
+        div.className = 'horario-opcion' + (hayConflicto ? ' conflicto' : '');
+        
+        const detallesHorarios = horarios.map(h => 
+            `${h.dia}: ${h.horaInicio}-${h.horaFin}${h.tipo ? ' (' + h.tipo + ')' : ''}`
+        ).join('<br>');
+        
+        div.innerHTML = `
+            <h4>Comisión ${comision}</h4>
+            <p>${detallesHorarios}</p>
+            ${hayConflicto ? '<span class="badge-conflicto">⚠️ Conflicto de horarios</span>' : ''}
+        `;
+        
+        if (!hayConflicto) {
+            div.onclick = () => agregarMateria(comision);
+        } else {
+            div.style.cursor = 'not-allowed';
+            div.style.opacity = '0.6';
         }
+        
+        horariosDisponibles.appendChild(div);
     });
+    
+    panelHorarios.style.display = 'block';
 }
 
-function crearEventoPreview(materia, comision, horario, hayConflicto) {
-    const div = document.createElement('div');
-    div.className = `calendar-event preview ${hayConflicto ? 'conflicto' : 'disponible'}`;
-    div.dataset.preview = 'true';
-    div.dataset.comision = comision;
+// Agregar materia al horario desde el panel
+function agregarMateria(comision) {
+    if (!materiaSeleccionada) return;
     
-    const inicio = convertirHoraAMinutos(horario.inicio);
-    const fin = convertirHoraAMinutos(horario.fin);
-    const duracion = fin - inicio;
-    
-    // Calcular posición dentro de la celda de 1 hora
-    const horaInicio = parseInt(horario.inicio.split(':')[0]);
-    const minutosInicio = parseInt(horario.inicio.split(':')[1]);
-    const offsetDentroDeHora = (minutosInicio / 60) * 60; // pixels dentro de la hora
-    
-    const height = (duracion / 60) * 60 - 4;
-    
-    div.style.top = `${offsetDentroDeHora}px`;
-    div.style.height = `${height}px`;
-    
-    div.innerHTML = `
-        <div class="event-name">${materia.nombre}</div>
-        <div class="event-time">${horario.inicio} - ${horario.fin}</div>
-        <div class="event-commission">${comision}</div>
-        <div class="status-badge ${hayConflicto ? 'conflicto' : 'disponible'}">
-            ${hayConflicto ? '❌ Conflicto' : '✓ Disponible'}
-        </div>
-    `;
-    
-    div.title = `${materia.nombre}\n${comision}\n${horario.dia} ${horario.inicio}-${horario.fin}\n${hayConflicto ? 'CONFLICTO - No disponible' : 'Click para agregar'}`;
-    
-    // Solo permitir click si no hay conflicto
-    if (!hayConflicto) {
-        div.addEventListener('click', (e) => {
-            e.stopPropagation();
-            agregarAlHorarioDesdePreview(materia, comision);
-        });
-    }
-    
-    return div;
-}
-
-function limpiarPreview() {
-    document.querySelectorAll('.calendar-event.preview').forEach(e => e.remove());
-    previewActual = null;
-}
-
-function agregarAlHorarioDesdePreview(materia, comision) {
     limpiarPreview();
     
-    const color = `event-color-${(colorIndex % 8) + 1}`;
+    // Buscar la materia en todasLasMaterias para obtener sus horarios
+    const materiaCompleta = todasLasMaterias[comision]?.find(m => m.nombre === materiaSeleccionada);
+    
+    if (!materiaCompleta) {
+        mostrarNotificacion(`❌ No se encontró la materia en ${comision}`, 'error');
+        return;
+    }
+    
+    // Filtrar horarios por cuatrimestre seleccionado
+    const horariosDelCuatrimestre = materiaCompleta.horarios.filter(h => 
+        h.cuatrimestre === cuatrimestreSeleccionado
+    );
+    
+    // Verificar conflictos
+    if (verificarConflicto(horariosDelCuatrimestre)) {
+        mostrarNotificacion(`❌ Hay conflicto de horarios con ${comision}`, 'error');
+        return;
+    }
+    
+    const color = `event-color-${(colorIndex % 10) + 1}`;
     colorIndex++;
     
     const item = {
-        ...materia,
+        ...materiaCompleta,
+        horarios: horariosDelCuatrimestre,
         comision: comision,
         color: color,
         id: Date.now()
@@ -289,9 +340,20 @@ function agregarAlHorarioDesdePreview(materia, comision) {
     
     horarioActual.push(item);
     renderizarHorario();
-    cargarMaterias(); // Actualizar lista de materias para ocultar la agregada
+    cerrarPanelHorarios();
+    cargarMaterias(); // Actualizar lista de materias
     
-    mostrarNotificacion(`✓ ${materia.nombre} (${comision}) agregada al horario`, 'success');
+    mostrarNotificacion(`✓ ${materiaCompleta.nombre} (${comision}) agregada al horario`, 'success');
+}
+
+function cerrarPanelHorarios() {
+    document.getElementById('panelHorarios').style.display = 'none';
+    limpiarPreview();
+}
+
+function limpiarPreview() {
+    document.querySelectorAll('.calendar-event.preview').forEach(e => e.remove());
+    previewActual = null;
 }
 
 // Verificar conflicto horario
@@ -315,28 +377,6 @@ function verificarConflicto(nuevosHorarios) {
 function convertirHoraAMinutos(hora) {
     const [horas, minutos] = hora.split(':').map(Number);
     return horas * 60 + minutos;
-}
-
-// Agregar materia al horario
-function agregarAlHorario(materia, comision) {
-    limpiarPreview();
-    
-    const color = `event-color-${(colorIndex % 8) + 1}`;
-    colorIndex++;
-    
-    const item = {
-        ...materia,
-        comision: comision,
-        color: color,
-        id: Date.now()
-    };
-    
-    horarioActual.push(item);
-    renderizarHorario();
-    cerrarPanelHorarios();
-    
-    // Mostrar mensaje de éxito
-    mostrarNotificacion(`✓ ${materia.nombre} (${comision}) agregada al horario`, 'success');
 }
 
 // Renderizar horario en el calendario

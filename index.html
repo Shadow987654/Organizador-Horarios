@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirigiendo...</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #d9ed92 0%, #76c893 25%, #34a0a4 50%, #1a759f 75%, #184e77 100%);
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+        h1 { color: #184e77; }
+        p { color: #666; margin: 20px 0; }
+        a {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #34a0a4;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        a:hover { background: #1a759f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Organizador de Horarios UTN</h1>
+        <p>Redirigiendo a la aplicación...</p>
+        <p>Si no se redirige automáticamente:</p>
+        <a href="frontend/index.html">Ir a la Aplicación</a>
+    </div>
+    <script>
+        // Redirección automática después de 2 segundos
+        setTimeout(() => {
+            window.location.href = 'frontend/index.html';
+        }, 2000);
+    </script>
+</body>
+</html>

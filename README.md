@@ -2,6 +2,16 @@
 
 Sistema completo para organizar horarios universitarios con base de datos SQLite y API REST.
 
+## 🎯 Características
+
+✅ Base de datos SQLite (no más datos hardcodeados)
+✅ API REST con Node.js + Express
+✅ 87 materias de 4° y 5° año
+✅ 8 comisiones (4K1-4K4, 5K1-5K4)
+✅ 163 horarios almacenados
+✅ Interfaz web intuitiva
+✅ Exportar horarios a PNG
+
 ## 📁 Estructura del Proyecto
 
 ```
@@ -13,24 +23,23 @@ Organizador-Horarios/
 │   └── js/
 │       ├── app.js        # Lógica principal (usa data.js local)
 │       ├── app-api.js    # Lógica con API (usa backend)
-│       └── data.js       # Datos estáticos (fallback)
+│       └── data.js       # Datos estáticos (para migración)
 │
 ├── backend/              # Servidor API Node.js
-│   ├── server.js         # Servidor Express
-│   ├── package.json      # Dependencias del backend
-│   └── scripts/
-│       ├── init-database.js   # Inicializar BD
-│       └── migrate-data.js    # Migrar datos JS → SQL
+│   ├── server.js         # Servidor Express con SQLite
+│   ├── init-db.js        # Script para crear la base de datos
+│   └── package.json      # Dependencias del backend
 │
 ├── database/             # Base de datos SQLite
-│   ├── schema.sql        # Esquema de tablas
-│   ├── seed.sql          # Datos iniciales
-│   └── organizador_horarios.db  # BD (generada)
+│   ├── horarios.db       # Base de datos SQLite (generada)
+│   ├── schema.sql        # Esquema de referencia
+│   └── seed.sql          # Datos de ejemplo
 │
 ├── docs/                 # Documentación
-│   └── README.md         # Este archivo
+│   ├── README.md         # Documentación general
+│   └── DATABASE.md       # Documentación de la base de datos
 │
-└── pdfs/                 # Archivos PDF de horarios
+└── pdfs/                 # Archivos PDF de horarios originales
     ├── F0D_tercer2025.pdf
     ├── ED3_horarios_2do_completo.pdf
     └── 263_horarios_1ro_completo.pdf
@@ -38,105 +47,132 @@ Organizador-Horarios/
 
 ## 🚀 Inicio Rápido
 
-### Opción 1: Solo Frontend (sin base de datos)
+### Requisitos
 
-1. Abre `frontend/index.html` en tu navegador
-2. Los datos se cargan desde `frontend/js/data.js`
+- Node.js 16 o superior
+- npm
 
-### Opción 2: Con Backend y Base de Datos
+### Instalación
 
-#### Paso 1: Instalar dependencias del backend
+1. **Instalar dependencias**
 
 ```powershell
 cd backend
 npm install
 ```
 
-#### Paso 2: Inicializar la base de datos
+2. **Crear la base de datos**
 
 ```powershell
 npm run init-db
 ```
 
-#### Paso 3: Migrar datos desde data.js
+Esto creará `database/horarios.db` con todos los datos.
 
-```powershell
-npm run migrate
-```
-
-#### Paso 4: Iniciar el servidor
+3. **Iniciar el servidor**
 
 ```powershell
 npm start
 ```
 
-El servidor estará disponible en `http://localhost:3000`
+4. **Abrir en el navegador**
 
-#### Paso 5: Configurar el frontend
+Visita: http://localhost:3000/frontend
 
-1. Edita `frontend/index.html`
-2. Comenta la línea de `app.js` y descomenta `app-api.js`:
+## 📡 API Endpoints
 
-```html
-<!-- <script src="js/app.js"></script> -->
-<script src="js/app-api.js"></script>
-```
+- `GET /api/health` - Estado del servidor
+- `GET /api/comisiones` - Lista de comisiones
+- `GET /api/comisiones/:codigo/materias` - Materias de una comisión
+- `GET /api/materias` - Todas las materias organizadas
 
-3. Abre `frontend/index.html` en tu navegador
+## 💾 Base de Datos
 
-## 📊 Estructura de la Base de Datos
+La base de datos SQLite (`database/horarios.db`) contiene:
 
-### Tablas principales:
+### Tablas:
 
-- **carreras**: Información de las carreras (ISI, etc.)
-- **anios_academicos**: Años de cada carrera (1ro a 5to)
-- **comisiones**: Comisiones por año (4K1, 4K2, 5K1, etc.)
-- **materias**: Materias con su tipo y cuatrimestre
-- **materias_comisiones**: Relación N:N entre materias y comisiones
-- **horarios**: Horarios de cada materia por comisión
+- **carreras**: Carreras universitarias
+- **anios_academicos**: Años académicos (4° y 5°)
+- **comisiones**: Comisiones/cursos (4K1-4K4, 5K1-5K4)
+- **materias**: Materias con colores asignados
+- **horarios**: Horarios de cada materia
 
-## 🛠️ API Endpoints
+### Datos almacenados:
 
-### Datos completos (compatible con frontend)
-```
-GET /api/datos-completos?cuatrimestre=1
-```
+- 1 Carrera (TUP - Tecnicatura Universitaria en Programación)
+- 2 Años académicos (4° y 5°)
+- 8 Comisiones
+- 87 Materias
+- 163 Horarios
 
-### Otras rutas disponibles:
-```
-GET /api/health                          # Estado de la API
-GET /api/carreras                        # Listar carreras
-GET /api/carreras/:id/anios              # Años de una carrera
-GET /api/anios/:id/comisiones            # Comisiones de un año
-GET /api/materias?anioId=4&cuatrimestre=1  # Filtrar materias
-GET /api/materias-comisiones             # Materias con comisiones
-GET /api/horarios/:materiaComisionId     # Horarios específicos
-```
+Ver más detalles en [`docs/DATABASE.md`](docs/DATABASE.md)
+
+## 🔄 Actualizar los Datos
+
+Si necesitas actualizar los horarios:
+
+1. Modifica `frontend/js/data.js`
+2. Ejecuta `npm run init-db` para recrear la base de datos
+3. Reinicia el servidor
 
 ## 📝 Scripts Disponibles
-
-### Backend:
 
 ```powershell
 npm start       # Iniciar servidor
 npm run dev     # Modo desarrollo (con nodemon)
-npm run init-db # Crear base de datos
-npm run migrate # Migrar datos desde data.js
+npm run init-db # Crear/recrear base de datos
 ```
 
 ## 🎨 Características
 
+- ✅ Base de datos SQLite (datos persistentes)
+- ✅ API REST con Node.js/Express
 - ✅ Interfaz responsive (móvil, tablet, desktop)
 - ✅ Detección automática de conflictos horarios
 - ✅ Exportación a PNG
-- ✅ Filtros por año y comisión
-- ✅ Materias desaparecen al agregarlas
+- ✅ 87 materias organizadas en 8 comisiones
 - ✅ Paleta de colores verde-azul moderna
-- ✅ Base de datos SQLite
-- ✅ API REST con Node.js/Express
-- ✅ Fallback a datos locales si API no está disponible
+- ✅ Sin compilación nativa (usa sql.js)
 
-## 🔧 Tecnologías Utilizadas
+## 🐛 Solución de Problemas
+
+**Error: "Base de datos no encontrada"**
+```powershell
+cd backend
+npm run init-db
+```
+
+**El servidor no inicia**
+```powershell
+cd backend
+npm install
+npm start
+```
+
+**Puerto 3000 en uso**
+
+Detén otros servidores o cambia el puerto en `backend/server.js`:
+```javascript
+const PORT = process.env.PORT || 3001;
+```
+
+## 📚 Documentación Adicional
+
+- [Documentación de la Base de Datos](docs/DATABASE.md)
+- [README Original](docs/README.md)
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crea una rama (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit tus cambios (`git commit -am 'Agregar nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Abre un Pull Request
+
+## 📄 Licencia
+
+Este proyecto es de código abierto y está disponible bajo la licencia MIT.## 🔧 Tecnologías Utilizadas
 
 ### Frontend:
 - HTML5, CSS3, JavaScript (ES6+)

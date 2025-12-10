@@ -10,6 +10,10 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Servir archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
+app.use(express.static(path.join(__dirname, '..')));
+
 // Cargar datos desde data.js como fallback
 let materiasData = {};
 
@@ -31,58 +35,9 @@ try {
 // RUTAS DE LA API
 // =========================
 
-// Ruta raíz - información de bienvenida
+// Ruta raíz - redirigir al frontend
 app.get('/', (req, res) => {
-    res.send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>API Organizador de Horarios</title>
-            <style>
-                body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-                h1 { color: #184e77; }
-                code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
-                .endpoint { background: #e8f5e9; padding: 10px; margin: 10px 0; border-radius: 5px; }
-                .method { color: #2e7d32; font-weight: bold; }
-            </style>
-        </head>
-        <body>
-            <h1>🚀 API Organizador de Horarios UTN</h1>
-            <p>El servidor está funcionando correctamente</p>
-            <p><strong>Comisiones:</strong> ${Object.keys(materiasData).length}</p>
-            <p><strong>Materias:</strong> ${Object.values(materiasData).flat().length}</p>
-            
-            <h2>📡 Endpoints Disponibles:</h2>
-            
-            <div class="endpoint">
-                <span class="method">GET</span> <code>/api/health</code> - Estado del servidor
-            </div>
-            
-            <div class="endpoint">
-                <span class="method">GET</span> <code>/api/datos-completos?cuatrimestre=1</code> - Todos los datos (compatible con frontend)
-            </div>
-            
-            <div class="endpoint">
-                <span class="method">GET</span> <code>/api/comisiones</code> - Lista de comisiones
-            </div>
-            
-            <div class="endpoint">
-                <span class="method">GET</span> <code>/api/comisiones/:codigo?cuatrimestre=1</code> - Materias de una comisión
-            </div>
-            
-            <div class="endpoint">
-                <span class="method">GET</span> <code>/api/materias/buscar?nombre=X&cuatrimestre=1</code> - Buscar materias
-            </div>
-            
-            <h2>🌐 Usar con Frontend:</h2>
-            <ol>
-                <li>Abre <code>frontend/index.html</code> en tu navegador</li>
-                <li>Edita el HTML para usar <code>app-api.js</code> en lugar de <code>app.js</code></li>
-                <li>Recarga la página</li>
-            </ol>
-        </body>
-        </html>
-    `);
+    res.redirect('/frontend/index.html');
 });
 
 // GET: Health check

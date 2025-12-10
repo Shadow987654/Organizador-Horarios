@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Servidor Funcionando</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .status {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .success {
+            color: #4ade80;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .links {
+            margin-top: 30px;
+        }
+        a {
+            display: block;
+            color: white;
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            margin: 10px 0;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        a:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateX(10px);
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Servidor Funcionando Correctamente</h1>
+    
+    <div class="status">
+        <p class="success">✅ El servidor está activo en el puerto 3000</p>
+        <p>Backend: Node.js + Express</p>
+        <p>Base de datos: SQLite (horarios.db)</p>
+        <p id="api-status">Estado API: Verificando...</p>
+    </div>
+
+    <div class="links">
+        <h2>📋 Enlaces Disponibles:</h2>
+        <a href="/frontend/index.html">🎨 Frontend - Organizador de Horarios</a>
+        <a href="/api/health">🏥 API Health Check</a>
+        <a href="/api/comisiones">📚 API - Lista de Comisiones</a>
+        <a href="/api/materias">📖 API - Todas las Materias</a>
+    </div>
+
+    <script>
+        // Verificar API
+        fetch('/api/health')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('api-status').innerHTML = 
+                    `Estado API: <span class="success">✅ ${data.status} - DB: ${data.database}</span>`;
+            })
+            .catch(err => {
+                document.getElementById('api-status').innerHTML = 
+                    'Estado API: ❌ Error de conexión';
+            });
+    </script>
+</body>
+</html>

@@ -11,282 +11,236 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Servir archivos estáticos
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
+app.use(express.static(path.join(__dirname, '..')));
+
 // Variables globales para la base de datos
 let db = null;
-let SQL = null;
 
-// Inicializar sql.js y cargar/crear base de datos
+// Inicializar sql.js y cargar base de datos
 async function initDatabase() {
-    SQL = await initSqlJs();
+    const SQL = await initSqlJs();
     
-    const dbPath = path.join(__dirname, '..', 'database', 'organizador_horarios.db');
+    const dbPath = path.join(__dirname, '..', 'database', 'horarios.db');
     
-    try {
-        // Intentar cargar base de datos existente
-        const buffer = fs.readFileSync(dbPath);
-        db = new SQL.Database(buffer);
-        console.log('✅ Base de datos cargada desde:', dbPath);
-    } catch (error) {
-        // Si no existe, crear nueva
-        db = new SQL.Database();
-        console.log('✅ Nueva base de datos creada en memoria');
-    }
-}
-
-// Función para guardar la base de datos
-function saveDatabase() {
-    if (!db) return;
-    
-    const dbPath = path.join(__dirname, '..', 'database', 'organizador_horarios.db');
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    
-    // Crear directorio si no existe
-    const dbDir = path.dirname(dbPath);
-    if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
+    if (!fs.existsSync(dbPath)) {
+        throw new Error('Base de datos no encontrada. Ejecuta: npm run init-db');
     }
     
-    fs.writeFileSync(dbPath, buffer);
+    const buffer = fs.readFileSync(dbPath);
+    db = new SQL.Database(buffer);
+    console.log('✅ Base de datos cargada correctamente');
 }
 
 // =========================
 // RUTAS DE LA API
 // =========================
 
-// GET: Obtener todas las carreras
-app.get('/api/carreras', (req, res) => {
-    try {
-        const result = db.exec('SELECT * FROM carreras');
-        const carreras = result.length > 0 ? result[0].values.map(row => ({
-            id: row[0],
-            nombre: row[1],
-            codigo: row[2],
-            facultad: row[3],
-            created_at: row[4]
-        })) : [];
-        res.json(carreras);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// GET: Obtener años académicos de una carrera
-app.get('/api/carreras/:carreraId/anios', (req, res) => {
-    try {
-        const { carreraId } = req.params;
-        const result = db.exec(`
-            SELECT * FROM anios_academicos 
-            WHERE carrera_id = ${carreraId}
-            ORDER BY numero_anio
-        `);
-        const anios = result.length > 0 ? result[0].values.map(row => ({
-            id: row[0],
-            carrera_id: row[1],
-            numero_anio: row[2],
-            descripcion: row[3]
-        })) : [];
-        res.json(anios);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// GET: Obtener comisiones de un año
-app.get('/api/anios/:anioId/comisiones', (req, res) => {
-    try {
-        const { anioId } = req.params;
-        const comisiones = db.prepare(`
-            SELECT * FROM comisiones 
-            WHERE anio_academico_id = ? 
-            ORDER BY codigo
-        `).all(anioId);
-        res.json(comisiones);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// GET: Obtener materias por año y cuatrimestre
-app.get('/api/materias', (req, res) => {
-    try {
-        const { anioId, cuatrimestre } = req.query;
-        
-        let query = `
-            SELECT DISTINCT m.* 
-            FROM materias m
-            WHERE 1=1
-        `;
-        const params = [];
-        
-        if (anioId) {
-            query += ' AND m.anio_academico_id = ?';
-            params.push(anioId);
-        }
-        
-        if (cuatrimestre) {
-            query += ` AND (m.cuatrimestre LIKE '%${cuatrimestre}%')`;
-        }
-        
-        query += ' ORDER BY m.nombre';
-        
-        const materias = db.prepare(query).all(...params);
-        res.json(materias);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// GET: Obtener materias con sus comisiones para un cuatrimestre específico
-app.get('/api/materias-comisiones', (req, res) => {
-    try {
-        const { anioId, cuatrimestre } = req.query;
-        
-        let query = `
-            SELECT 
-                m.id as materia_id,
-                m.nombre,
-                m.tipo,
-                m.es_electiva,
-                m.cuatrimestre,
-                c.id as comision_id,
-                c.codigo as comision,
-                mc.id as materia_comision_id
-            FROM materias m
-            INNER JOIN materias_comisiones mc ON m.id = mc.materia_id
-            INNER JOIN comisiones c ON mc.comision_id = c.id
-            WHERE 1=1
-        `;
-        const params = [];
-        
-        if (anioId) {
-            query += ' AND m.anio_academico_id = ?';
-            params.push(anioId);
-        }
-        
-        if (cuatrimestre) {
-            query += ` AND (m.cuatrimestre LIKE '%${cuatrimestre}%')`;
-        }
-        
-        query += ' ORDER BY m.nombre, c.codigo';
-        
-        const data = db.prepare(query).all(...params);
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// GET: Obtener horarios de una materia-comisión
-app.get('/api/horarios/:materiaComisionId', (req, res) => {
-    try {
-        const { materiaComisionId } = req.params;
-        const horarios = db.prepare(`
-            SELECT * FROM horarios 
-            WHERE materia_comision_id = ? 
-            ORDER BY 
-                CASE dia_semana
-                    WHEN 'Lunes' THEN 1
-                    WHEN 'Martes' THEN 2
-                    WHEN 'Miércoles' THEN 3
-                    WHEN 'Jueves' THEN 4
-                    WHEN 'Viernes' THEN 5
-                    WHEN 'Sábado' THEN 6
-                    WHEN 'Domingo' THEN 7
-                END,
-                hora_inicio
-        `).all(materiaComisionId);
-        res.json(horarios);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// GET: Obtener datos completos para el frontend (formato compatible)
-app.get('/api/datos-completos', (req, res) => {
-    try {
-        const { cuatrimestre } = req.query;
-        
-        // Consulta que agrupa por comisión
-        let query = `
-            SELECT 
-                c.codigo as comision,
-                m.nombre,
-                m.tipo,
-                m.es_electiva,
-                m.cuatrimestre,
-                h.dia_semana as dia,
-                h.hora_inicio as inicio,
-                h.hora_fin as fin,
-                h.aula
-            FROM horarios h
-            INNER JOIN materias_comisiones mc ON h.materia_comision_id = mc.id
-            INNER JOIN materias m ON mc.materia_id = m.id
-            INNER JOIN comisiones c ON mc.comision_id = c.id
-            WHERE 1=1
-        `;
-        
-        if (cuatrimestre) {
-            query += ` AND (m.cuatrimestre LIKE '%${cuatrimestre}%')`;
-        }
-        
-        query += ' ORDER BY c.codigo, m.nombre, h.dia_semana, h.hora_inicio';
-        
-        const rows = db.prepare(query).all();
-        
-        // Transformar a formato del frontend (similar a data.js)
-        const materiasData = {};
-        
-        rows.forEach(row => {
-            if (!materiasData[row.comision]) {
-                materiasData[row.comision] = [];
-            }
-            
-            // Buscar si ya existe la materia en esta comisión
-            let materia = materiasData[row.comision].find(m => m.nombre === row.nombre);
-            
-            if (!materia) {
-                materia = {
-                    nombre: row.nombre,
-                    tipo: row.tipo,
-                    electiva: Boolean(row.es_electiva),
-                    cuatrimestre: row.cuatrimestre.split(',').map(Number),
-                    horarios: []
-                };
-                materiasData[row.comision].push(materia);
-            }
-            
-            // Agregar horario
-            materia.horarios.push({
-                dia: row.dia,
-                inicio: row.inicio,
-                fin: row.fin,
-                aula: row.aula
-            });
-        });
-        
-        res.json(materiasData);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+// Ruta principal - redirigir al frontend
+app.get('/', (req, res) => {
+    res.redirect('/frontend/index.html');
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'API funcionando correctamente' });
+    res.json({ 
+        status: 'ok', 
+        database: db ? 'connected' : 'disconnected',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Obtener todas las comisiones con sus materias
+app.get('/api/comisiones', (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                c.id,
+                c.codigo,
+                c.descripcion,
+                a.anio
+            FROM comisiones c
+            JOIN anios_academicos a ON c.anio_academico_id = a.id
+            ORDER BY a.anio, c.codigo
+        `;
+        
+        const result = db.exec(query);
+        if (result.length === 0) {
+            return res.json([]);
+        }
+        
+        const comisiones = result[0].values.map(row => ({
+            id: row[0],
+            codigo: row[1],
+            descripcion: row[2],
+            anio: row[3]
+        }));
+        
+        res.json(comisiones);
+    } catch (error) {
+        console.error('Error al obtener comisiones:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Obtener materias de una comisión
+app.get('/api/comisiones/:codigo/materias', (req, res) => {
+    try {
+        const { codigo } = req.params;
+        
+        const query = `
+            SELECT 
+                m.id,
+                m.nombre,
+                m.color
+            FROM materias m
+            JOIN comisiones c ON m.comision_id = c.id
+            WHERE c.codigo = ?
+            ORDER BY m.nombre
+        `;
+        
+        const result = db.exec(query, [codigo]);
+        if (result.length === 0) {
+            return res.json([]);
+        }
+        
+        const materias = result[0].values.map(row => ({
+            id: row[0],
+            nombre: row[1],
+            color: row[2],
+            horarios: []
+        }));
+        
+        // Obtener horarios para cada materia
+        for (const materia of materias) {
+            const horariosQuery = `
+                SELECT dia, hora_inicio, hora_fin
+                FROM horarios
+                WHERE materia_id = ?
+                ORDER BY 
+                    CASE dia
+                        WHEN 'Lunes' THEN 1
+                        WHEN 'Martes' THEN 2
+                        WHEN 'Miércoles' THEN 3
+                        WHEN 'Jueves' THEN 4
+                        WHEN 'Viernes' THEN 5
+                        WHEN 'Sábado' THEN 6
+                    END,
+                    hora_inicio
+            `;
+            
+            const horariosResult = db.exec(horariosQuery, [materia.id]);
+            if (horariosResult.length > 0) {
+                materia.horarios = horariosResult[0].values.map(row => ({
+                    dia: row[0],
+                    inicio: row[1],
+                    fin: row[2]
+                }));
+            }
+        }
+        
+        res.json(materias);
+    } catch (error) {
+        console.error('Error al obtener materias:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Obtener todas las materias con sus horarios (formato compatible)
+app.get('/api/materias', (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                c.codigo as comision,
+                m.id,
+                m.nombre,
+                m.color
+            FROM materias m
+            JOIN comisiones c ON m.comision_id = c.id
+            ORDER BY c.codigo, m.nombre
+        `;
+        
+        const result = db.exec(query);
+        if (result.length === 0) {
+            return res.json({});
+        }
+        
+        const materiasData = {};
+        
+        for (const row of result[0].values) {
+            const comision = row[0];
+            const materiaId = row[1];
+            const nombre = row[2];
+            const color = row[3];
+            
+            if (!materiasData[comision]) {
+                materiasData[comision] = [];
+            }
+            
+            // Obtener horarios
+            const horariosQuery = `
+                SELECT dia, hora_inicio, hora_fin
+                FROM horarios
+                WHERE materia_id = ?
+                ORDER BY 
+                    CASE dia
+                        WHEN 'Lunes' THEN 1
+                        WHEN 'Martes' THEN 2
+                        WHEN 'Miércoles' THEN 3
+                        WHEN 'Jueves' THEN 4
+                        WHEN 'Viernes' THEN 5
+                        WHEN 'Sábado' THEN 6
+                    END,
+                    hora_inicio
+            `;
+            
+            const horariosResult = db.exec(horariosQuery, [materiaId]);
+            const horarios = horariosResult.length > 0 
+                ? horariosResult[0].values.map(h => ({
+                    dia: h[0],
+                    inicio: h[1],
+                    fin: h[2]
+                }))
+                : [];
+            
+            materiasData[comision].push({
+                nombre,
+                color,
+                horarios
+            });
+        }
+        
+        res.json(materiasData);
+    } catch (error) {
+        console.error('Error al obtener materias:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Iniciar servidor
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`📊 Base de datos: ${path.join(__dirname, '..', 'database', 'organizador_horarios.db')}`);
-});
+initDatabase()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+            console.log(`📊 API disponible en http://localhost:${PORT}/api`);
+            console.log(`🎨 Frontend disponible en http://localhost:${PORT}/frontend`);
+        });
+    })
+    .catch(error => {
+        console.error('❌ Error al inicializar la base de datos:', error.message);
+        console.log('💡 Ejecuta: npm run init-db');
+        process.exit(1);
+    });
 
-// Cerrar DB al terminar
+// Guardar cambios en la BD al cerrar
 process.on('SIGINT', () => {
-    db.close();
-    console.log('\n👋 Base de datos cerrada');
+    if (db) {
+        const data = db.export();
+        const buffer = Buffer.from(data);
+        const dbPath = path.join(__dirname, '..', 'database', 'horarios.db');
+        fs.writeFileSync(dbPath, buffer);
+        console.log('\n💾 Base de datos guardada');
+    }
     process.exit(0);
 });
-
-module.exports = app;
