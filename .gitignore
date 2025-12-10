@@ -1,0 +1,24 @@
+# Organizador-Horarios
+
+# Base de datos
+database/organizador_horarios.db
+
+# Dependencias de Node
+backend/node_modules/
+backend/package-lock.json
+
+# Archivos temporales
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema
+desktop.ini

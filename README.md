@@ -1,88 +1,176 @@
 # Organizador de Horarios - ISI UTN FRRO
 
-Aplicación web responsive para organizar horarios de las materias de 4to y 5to año de Ingeniería en Sistemas de Información.
+Sistema completo para organizar horarios universitarios con base de datos SQLite y API REST.
 
-## Características
-
-- **Selección de cuatrimestre**: Elige entre primer o segundo cuatrimestre al inicio
-- **Calendario visual**: Vista semanal de Lunes a Sábado (8:00 a 23:00)
-- **Detección de conflictos**: Indica automáticamente si hay superposición horaria
-- **Colores distintivos**: Cada materia se muestra con un color diferente
-- **Filtros**: Filtra materias por año (4to/5to) y por comisión
-- **Combinación flexible**: Combina materias de 4to y 5to año según necesites
-- **Exportación**: Descarga tu horario en formato texto
-- **Responsive**: Funciona en desktop, tablet y móvil
-
-## Comisiones disponibles
-
-- **4to Año**: 4K1, 4K2, 4K3, 4K4
-- **5to Año**: 5K1, 5K2, 5K3, 5K4
-
-## Tipos de materias
-
-- **Anuales**: Disponibles en ambos cuatrimestres
-- **Cuatrimestrales**: Solo primer o segundo cuatrimestre
-- **Obligatorias**: Materias requeridas
-- **Electivas**: Materias opcionales (marcadas con color naranja)
-
-## Cómo usar
-
-1. **Selecciona el cuatrimestre** al abrir la aplicación
-2. **Explora las materias** en el panel lateral
-3. **Haz clic en una materia** para ver horarios disponibles
-4. **Verifica disponibilidad**: 
-   - ✅ Verde = Sin conflictos, puedes agregar
-   - ❌ Rojo = Conflicto horario, no se puede agregar
-5. **Haz clic en una comisión** para agregarla al calendario
-6. **Exporta tu horario** cuando hayas terminado
-
-## Estructura de archivos
+## 📁 Estructura del Proyecto
 
 ```
 Organizador-Horarios/
-├── index.html      # Estructura de la aplicación
-├── styles.css      # Estilos y diseño responsive
-├── data.js         # Datos de materias y horarios
-├── app.js          # Lógica de la aplicación
-└── README.md       # Este archivo
+├── frontend/              # Aplicación web (cliente)
+│   ├── index.html        # Página principal
+│   ├── css/
+│   │   └── styles.css    # Estilos de la aplicación
+│   └── js/
+│       ├── app.js        # Lógica principal (usa data.js local)
+│       ├── app-api.js    # Lógica con API (usa backend)
+│       └── data.js       # Datos estáticos (fallback)
+│
+├── backend/              # Servidor API Node.js
+│   ├── server.js         # Servidor Express
+│   ├── package.json      # Dependencias del backend
+│   └── scripts/
+│       ├── init-database.js   # Inicializar BD
+│       └── migrate-data.js    # Migrar datos JS → SQL
+│
+├── database/             # Base de datos SQLite
+│   ├── schema.sql        # Esquema de tablas
+│   ├── seed.sql          # Datos iniciales
+│   └── organizador_horarios.db  # BD (generada)
+│
+├── docs/                 # Documentación
+│   └── README.md         # Este archivo
+│
+└── pdfs/                 # Archivos PDF de horarios
+    ├── F0D_tercer2025.pdf
+    ├── ED3_horarios_2do_completo.pdf
+    └── 263_horarios_1ro_completo.pdf
 ```
 
-## Tecnologías utilizadas
+## 🚀 Inicio Rápido
 
-- HTML5
-- CSS3 (Grid, Flexbox, animaciones)
-- JavaScript (ES6+)
-- Sin dependencias externas
+### Opción 1: Solo Frontend (sin base de datos)
 
-## Instalación
+1. Abre `frontend/index.html` en tu navegador
+2. Los datos se cargan desde `frontend/js/data.js`
 
-No requiere instalación. Simplemente abre `index.html` en tu navegador web favorito.
+### Opción 2: Con Backend y Base de Datos
 
-## Navegadores compatibles
+#### Paso 1: Instalar dependencias del backend
 
-- Chrome/Edge (recomendado)
-- Firefox
-- Safari
-- Opera
+```powershell
+cd backend
+npm install
+```
 
-## Características técnicas
+#### Paso 2: Inicializar la base de datos
 
-- **100% offline**: No requiere conexión a internet
-- **Sin backend**: Todo funciona en el navegador
-- **Ligero**: Menos de 200KB en total
-- **Rápido**: Carga instantánea
+```powershell
+npm run init-db
+```
 
-## Funcionalidades adicionales
+#### Paso 3: Migrar datos desde data.js
 
-- **Notificaciones**: Feedback visual de todas las acciones
-- **Cambio de cuatrimestre**: Cambia entre cuatrimestres sin recargar
-- **Eliminar materias**: Haz clic en la × sobre cada materia en el calendario
-- **Limpiar horario**: Borra todas las materias de una vez
+```powershell
+npm run migrate
+```
 
-## Autor
+#### Paso 4: Iniciar el servidor
 
-Creado para estudiantes de ISI - UTN FRRO
+```powershell
+npm start
+```
 
-## Licencia
+El servidor estará disponible en `http://localhost:3000`
+
+#### Paso 5: Configurar el frontend
+
+1. Edita `frontend/index.html`
+2. Comenta la línea de `app.js` y descomenta `app-api.js`:
+
+```html
+<!-- <script src="js/app.js"></script> -->
+<script src="js/app-api.js"></script>
+```
+
+3. Abre `frontend/index.html` en tu navegador
+
+## 📊 Estructura de la Base de Datos
+
+### Tablas principales:
+
+- **carreras**: Información de las carreras (ISI, etc.)
+- **anios_academicos**: Años de cada carrera (1ro a 5to)
+- **comisiones**: Comisiones por año (4K1, 4K2, 5K1, etc.)
+- **materias**: Materias con su tipo y cuatrimestre
+- **materias_comisiones**: Relación N:N entre materias y comisiones
+- **horarios**: Horarios de cada materia por comisión
+
+## 🛠️ API Endpoints
+
+### Datos completos (compatible con frontend)
+```
+GET /api/datos-completos?cuatrimestre=1
+```
+
+### Otras rutas disponibles:
+```
+GET /api/health                          # Estado de la API
+GET /api/carreras                        # Listar carreras
+GET /api/carreras/:id/anios              # Años de una carrera
+GET /api/anios/:id/comisiones            # Comisiones de un año
+GET /api/materias?anioId=4&cuatrimestre=1  # Filtrar materias
+GET /api/materias-comisiones             # Materias con comisiones
+GET /api/horarios/:materiaComisionId     # Horarios específicos
+```
+
+## 📝 Scripts Disponibles
+
+### Backend:
+
+```powershell
+npm start       # Iniciar servidor
+npm run dev     # Modo desarrollo (con nodemon)
+npm run init-db # Crear base de datos
+npm run migrate # Migrar datos desde data.js
+```
+
+## 🎨 Características
+
+- ✅ Interfaz responsive (móvil, tablet, desktop)
+- ✅ Detección automática de conflictos horarios
+- ✅ Exportación a PNG
+- ✅ Filtros por año y comisión
+- ✅ Materias desaparecen al agregarlas
+- ✅ Paleta de colores verde-azul moderna
+- ✅ Base de datos SQLite
+- ✅ API REST con Node.js/Express
+- ✅ Fallback a datos locales si API no está disponible
+
+## 🔧 Tecnologías Utilizadas
+
+### Frontend:
+- HTML5, CSS3, JavaScript (ES6+)
+- html2canvas (exportación a imagen)
+- Sin frameworks (vanilla JS)
+
+### Backend:
+- Node.js
+- Express.js
+- better-sqlite3
+- CORS
+
+## 📖 Cómo Usar la Aplicación
+
+1. **Selecciona el cuatrimestre** (1° o 2°)
+2. **Explora las materias** en el panel lateral
+3. **Haz clic en una materia** para ver horarios
+4. **Selecciona una comisión** en el calendario:
+   - 🟢 Verde = Sin conflictos
+   - 🔴 Rojo = Conflicto horario
+5. **Exporta tu horario** cuando termines
+
+## 🤝 Contribuir
+
+Para agregar horarios de nuevos años:
+
+1. Edita `database/seed.sql` para agregar años
+2. Inserta datos en la BD directamente o
+3. Actualiza `frontend/js/data.js` y ejecuta `npm run migrate`
+
+## 📄 Licencia
 
 Libre uso para estudiantes de la UTN FRRO
+
+---
+
+**Desarrollado para estudiantes de Ingeniería en Sistemas de Información - UTN FRRO**
